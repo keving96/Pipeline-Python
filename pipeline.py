@@ -14,9 +14,9 @@ def write_to_file(inputs, filename):
             twos_complement_real = round(abs(value.real))
             twos_complement_imag = round(abs(value.imag))
             if value.real < 0:
-                twos_complement_real = (2**16  - twos_complement_real)
+                twos_complement_real = (2**15  - twos_complement_real)
             if value.imag < 0:
-                twos_complement_imag = (2**16  - twos_complement_imag)
+                twos_complement_imag = (2**15  - twos_complement_imag)
             
             targetFile.write((format(twos_complement_real, "016b") 
                             + format(twos_complement_imag, "016b")) 
@@ -99,8 +99,8 @@ def main():
     print("\nPipeline for self-chosen values")
     write_to_file(testcases, "testcases")
     pipeline(testcases, 8)
-    
-    '''# sinus random values
+    '''
+    # sinus random values
     print("\nPipeline for random sinus values")
     sinus = np.sin(np.random.uniform(-np.pi, np.pi, n) 
                     + np.random.uniform(-np.pi, np.pi, n) * 1j)
