@@ -1,6 +1,43 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def twos_complement_test():
+    test_list = [x - x*1j for x in range(0,32769)]
+    #print(test_list)
+    result_list = twos_complement(test_list)
+    for i in range(0,32769):
+        print(test_list[i].real, test_list[i].imag, result_list[i][0],
+            result_list[i][1], int(result_list[i][0], 2),
+            int(result_list[i][1], 2), "index:", i)
+
+def twos_complement(inputs):
+    real = ""
+    imag = ""
+    tc_list = []
+    for value in inputs:
+        # negative number --> (2^16 - number) [-32768, -1]
+        # positive number --> (number) [1, 32767]
+        
+        # real part
+        twos_complement_real = round(value.real)
+        if twos_complement_real == 0:
+            real = format(0, "016b")
+        elif twos_complement_real >= -32768 and twos_complement_real < 0:
+            real = format(2**16  - abs(twos_complement_real), "016b")
+        elif twos_complement_real < 32768 and twos_complement_real > 0:
+            real = format(abs(twos_complement_real), "016b")
+        # imaginary part
+        twos_complement_imag = round(value.imag)
+        if twos_complement_imag == 0:
+            imag = format(0, "016b")
+        elif twos_complement_imag >= -32768 and twos_complement_imag < 0:
+            imag = format(2**16  - abs(twos_complement_imag), "016b")
+        elif twos_complement_imag < 32768 and twos_complement_imag > 0:
+            imag = format(abs(twos_complement_imag), "016b")
+
+        tc_list.append((imag, real))
+    return tc_list
+
 def write_to_file(inputs, filename):
     '''
         Writes complex numbers as 32-bit std_logic_vectors into a new file.
@@ -9,18 +46,10 @@ def write_to_file(inputs, filename):
     '''
     
     targetFile = open(filename + ".txt", "w")
-    for value in inputs:
-        if value <= 2147450879: # = 01111111111111110111111111111111
-            twos_complement_real = round(abs(value.real))
-            twos_complement_imag = round(abs(value.imag))
-            if value.real < 0:
-                twos_complement_real = (2**15  - twos_complement_real)
-            if value.imag < 0:
-                twos_complement_imag = (2**15  - twos_complement_imag)
-            
-            targetFile.write((format(twos_complement_real, "016b") 
-                            + format(twos_complement_imag, "016b")) 
-                            + "\n")
+
+    tc_list = twos_complement(inputs)
+    for tc in tc_list:
+        targetFile.write(tc[0] + tc[1] + "\n")
     targetFile.close()
 
 def print_list(pList):
@@ -42,26 +71,31 @@ def pipeline(samples, samples_size):
     '''
         Calculates FFT, its Power Spectrum and IFFT.
     '''
+    # input
+    print("========================================")
+    print("Samples")
+    print(samples[0:10])
+
     # FFT
     print("========================================")
     print("FFT")
-    fft_result = np.fft.fft(samples, samples_size, norm = "backward")
+    fft_result = np.fft.fft(samples, samples_size, norm = "forward")
     #print_list(fft_result)
     print(fft_result[0:10])
     print("========================================")
 
     # IFFT
     print("IFFT")
-    ifft_result = np.fft.ifft(fft_result)
+    ifft_result = np.fft.ifft(fft_result, norm = "forward")
     #print_list(ifft_result)
-    print(ifft_result)
+    print(ifft_result[0:10])
     print("========================================")
 
     # power spectrum
     print("Power Spectrum")
     power_spectrum = (np.abs(fft_result)**2)  
     #print_list(power_spectrum)
-    print(power_spectrum)
+    print(power_spectrum[0:10])
     print("========================================")
 
     # Plot FFT
@@ -71,6 +105,8 @@ def main():
     '''
         Specify testcases and call methods.
     '''
+    #twos_complement_test()
+
     n = 2**15 # 32768
 
     # x"7a7a7a7a",
@@ -94,21 +130,21 @@ def main():
     #test = [np.random.uniform(7, 2**10) 
     #       + np.random.uniform(7, 2**10) * 1j for _ in range(32678)]
     testcases = np.array(inputs)
-
+    
     # calculate fft, ifft, power spectrum
     print("\nPipeline for self-chosen values")
-    write_to_file(testcases, "testcases")
-    pipeline(testcases, 8)
-    '''
+    #write_to_file(testcases, "testcases")
+    #pipeline(testcases, 8)
+    
     # sinus random values
     print("\nPipeline for random sinus values")
-    sinus = np.sin(np.random.uniform(-np.pi, np.pi, n) 
-                    + np.random.uniform(-np.pi, np.pi, n) * 1j)
-    print(sinus)
+    sinus = np.sin(np.random.uniform(10*-np.pi, 10*np.pi, n)*1000
+                    + np.random.uniform(-np.pi, np.pi, n) * 1j)*1000
+    #print(sinus)
     write_to_file(sinus, "sinus")
     #plot_fft(sinus)
-    #pipeline(sinus, n)
-
+    pipeline(sinus, n)
+    '''
     # sinus from -pi to +pi
     print("\nPipeline for sinus wave")
     pis = np.linspace(-np.pi, np.pi, n)
@@ -117,7 +153,7 @@ def main():
     print(sinus_pis)
     #plot_fft(sinus_pis)
     #pipeline(sinus_pis, n)
-
+    
     # cosinus random values
     print("\nPipeline for random cosinus values")
     cosinus = np.cos(np.random.uniform(-np.pi, np.pi, n) 
