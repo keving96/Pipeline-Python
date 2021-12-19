@@ -1,6 +1,28 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools as itools
+import bitstring
+import math
+
+def single_precision_floating_point(numbers):
+    fp_list = []
+    for number in numbers:
+        real = bitstring.BitArray(float=number.real, length=32)
+        imag = bitstring.BitArray(float=number.imag, length=32)
+        fp_list.append((imag.bin, real.bin))
+    return fp_list
+
+def write_to_file_floating_point(inputs, filename):
+    '''
+        Writes a 64-bit floating point representation into a new file.
+        The first 32 bits form the imaginary part and the last 32 bits the real part.
+    '''
+    targetFile = open(filename + ".txt", "w")
+
+    fp_list = single_precision_floating_point(inputs)
+    for fp in fp_list:
+        targetFile.write(fp[0] + fp[1] + "\n")
+    targetFile.close()
 
 def twos_complement_test():
     test_list = [x - x*1j for x in range(4294960295,4294967297)]
@@ -39,11 +61,11 @@ def twos_complement(inputs):
         tc_list.append((imag, real))
     return tc_list
 
-def write_to_file(inputs, filename):
+def write_to_file_fixed_point(inputs, filename):
     '''
-        Writes complex numbers as 32-bit std_logic_vectors into a new file.
-        The 32-bit vector is represented as dual 16-bit two's complement numbers
-        The first 16 bits form the imaginary part and the last 16 bits the real part.
+        Writes complex numbers as 64-bit std_logic_vectors into a new file.
+        The 64-bit vector is represented as dual 32-bit two's complement numbers
+        The first 32 bits form the imaginary part and the last 32 bits the real part.
     '''
     
     targetFile = open(filename + ".txt", "w")
@@ -70,24 +92,25 @@ def plot_fft(fft_res):
 
 def pipeline(samples, samples_size):
     '''
-        Calculates FFT, its Power Spectrum and IFFT.
+        Calculates FFT, its Power Spectrum, IFFT and accumulates
+        Power Spectrum
     '''
     # input
     print("========================================")
     print("Samples")
     print(samples[0:20])
-
+    plot_fft(samples)
     # FFT
     print("========================================")
     print("FFT")
-    fft_result = np.fft.fft(samples, samples_size, norm = "forward")
+    fft_result = np.fft.fft(samples, samples_size, norm = "backward")
     #print_list(fft_result)
     print(fft_result[0:20])
     print("========================================")
-
+    plot_fft(fft_result)
     # IFFT
     print("IFFT")
-    ifft_result = np.fft.ifft(fft_result, norm = "forward")
+    ifft_result = np.fft.ifft(fft_result, norm = "backward")
     #print_list(ifft_result)
     print(ifft_result[0:20])
     print("========================================")
@@ -97,8 +120,16 @@ def pipeline(samples, samples_size):
     power_spectrum = (np.abs(fft_result)**2)  
     #print_list(power_spectrum)
     print(power_spectrum[0:20])
+    print(max(power_spectrum))
     print("========================================")
 
+    print("acccumulation with itertools")
+    #for each in itools.accumulate(power_spectrum[0:samples_size]):
+    #    print(each)
+    akkum = list(itools.accumulate(power_spectrum[0:samples_size]))
+    print(akkum[0:60])
+    print("########################################")
+    
     # Plot FFT
     #plot_fft(fft_result)
 
@@ -110,14 +141,6 @@ def main():
 
     n = 2**15 # 32768
 
-    # x"7a7a7a7a",
-    # x"6b6b6b6b", 
-    # x"5c5c5c5c", 
-    # x"4d4d4d4d", 
-    # x"3e3e3e3e", 
-    # x"2b2d2b2d", 
-    # x"1a1b1a1b", 
-    # x"0b0a0b0a", 
     inputs = [
         (31354 + 31354j),
         (27499 + 27499j),
@@ -128,31 +151,31 @@ def main():
         (6683 + 6683j),
         (2826 + 2826j)
     ]# * 4096
-    #test = [np.random.uniform(7, 2**10) 
-    #       + np.random.uniform(7, 2**10) * 1j for _ in range(32678)]
+
     testcases = np.array(inputs)
     
     # calculate fft, ifft, power spectrum
     print("\nPipeline for self-chosen values")
-    #write_to_file(testcases, "testcases")
+    #write_to_file_fixed_point(testcases, "testcases")
+    #write_to_file_floating_point(testcases, "testcases")
     #pipeline(testcases, 8)
-    
+
     # sinus random values
-    print("\nPipeline for random sinus values")
-    #sinus = np.sin(np.random.uniform(10*-np.pi, 10*np.pi, n)*1000
-    #                + np.random.uniform(-np.pi, np.pi, n) * 1j)*1000
-    #print(sinus)
-    #write_to_file(sinus, "sinus")
+    '''print("\nPipeline for random sinus values")
+    sinus = np.sin(np.random.uniform(10*-np.pi, 10*np.pi, n)*1000
+                    + np.random.uniform(-np.pi, np.pi, n) * 1j)*1000
+    print(sinus)
+    write_to_file_floating_point(sinus, "sinus")
     #plot_fft(sinus)
-    #pipeline(sinus, n)
-    
+    pipeline(sinus, n)'''
+
     # sinus from -pi to +pi
     print("\nPipeline for sinus wave")
-    pis = np.linspace(0, 100*np.pi, n)
-    sinus_pis = np.sin(pis)*2000000 + np.sin(pis) * 1j*2500000
+    pis = np.linspace(0, 20*np.pi, n)
+    sinus_pis = np.sin(pis)*1234 + np.sin(pis)*4321 * 1j
     print(sinus_pis)
-    write_to_file(sinus_pis, "sinus_pis")
-    #print(sinus_pis)
+    #write_to_file_floating_point(sinus_pis, "sinus_pis")
+
     #plot_fft(sinus_pis)
     pipeline(sinus_pis, n)
     '''
